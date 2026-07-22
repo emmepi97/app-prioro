@@ -1,0 +1,162 @@
+*{box-sizing:border-box}
+:root{--bg:#f7f7f5;--card:#ffffff;--ink:#18181b;--muted:#71717a;--line:#e4e4e7;--soft:#f4f4f5;--primary:#18181b;--danger:#b91c1c;--radius:18px}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,Segoe UI,system-ui,-apple-system,Arial,sans-serif}
+button,input,select,textarea{font:inherit}
+button{cursor:pointer}
+.loading{min-height:100vh;display:grid;place-items:center;font-weight:700;color:var(--muted)}
+.auth-page{min-height:100vh;display:grid;place-items:center;padding:20px;background:var(--bg)}
+.auth-card{width:min(420px,100%);background:var(--card);border:1px solid var(--line);border-radius:24px;padding:28px}
+.brand-badge{display:inline-flex;gap:8px;align-items:center;font-size:13px;font-weight:700;color:var(--muted);margin-bottom:16px}
+.auth-card h1{margin:0 0 8px;font-size:34px;letter-spacing:-.05em;line-height:1}
+.auth-card p{margin:0 0 22px;color:var(--muted);line-height:1.45}
+.auth-form{display:flex;flex-direction:column;gap:10px}
+.auth-form label{display:flex;gap:7px;align-items:center;color:var(--muted);font-size:13px;font-weight:700}
+input,select,textarea{width:100%;border:1px solid var(--line);border-radius:14px;background:#fff;color:var(--ink);padding:10px 12px;outline:none}
+input:focus,select:focus,textarea:focus{border-color:#a1a1aa}
+textarea{resize:vertical}
+.primary,.soft-btn,.logout-btn,.link-btn{border:0;border-radius:14px;padding:10px 12px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;gap:7px}
+.primary{background:var(--primary);color:white}
+.soft-btn{background:var(--soft);color:var(--ink)}
+.logout-btn{background:#fff1f2;color:var(--danger)}
+.link-btn{width:100%;background:transparent;color:var(--ink);margin-top:12px}
+.notice{border:1px solid var(--line);background:var(--soft);border-radius:14px;padding:10px 12px;color:var(--muted)}
+.notice.error{margin-bottom:14px;color:var(--danger);background:#fff1f2;border-color:#fecdd3}
+.app-shell{max-width:1500px;margin:0 auto;padding:22px}
+.topbar{display:flex;justify-content:space-between;gap:18px;align-items:flex-end;margin-bottom:18px}
+.eyebrow{margin:0 0 5px;color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.1em;font-weight:800}
+.topbar h1{margin:0;font-size:clamp(30px,4vw,46px);letter-spacing:-.06em;line-height:1}
+.subtitle{margin:6px 0 0;color:var(--muted)}
+.top-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
+.status-pill{border:1px solid var(--line);border-radius:999px;padding:8px 12px;color:var(--muted);background:white;font-size:13px;font-weight:700}
+.layout{display:grid;grid-template-columns:360px 1fr;gap:16px;align-items:start}
+.sidebar{display:flex;flex-direction:column;gap:14px}
+.panel,.calendar-panel{background:var(--card);border:1px solid var(--line);border-radius:24px;padding:14px}
+.section-title,.calendar-head,.archive-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.section-title h2,.calendar-head h2,.archive-head h2{margin:0;font-size:17px;letter-spacing:-.02em}
+.calendar-head p{margin:5px 0 0;color:var(--muted);font-size:14px}
+.count,.archive-head span{background:var(--soft);border-radius:999px;padding:3px 9px;font-size:12px;font-weight:800;color:var(--muted)}
+.quick-form{display:flex;flex-direction:column;gap:8px;margin-top:12px}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.category-form{display:grid;grid-template-columns:1fr 50px 70px;gap:8px;margin-top:12px}
+.category-form input[type=color]{height:42px;padding:4px}
+.chips{display:flex;flex-wrap:wrap;gap:7px;margin-top:12px}
+.chip{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line);border-radius:999px;padding:6px 9px;font-size:12px;font-weight:700;background:#fff;color:var(--ink)}
+.chip:before{content:"";width:8px;height:8px;border-radius:50%;background:var(--chip)}
+.chip button{border:0;background:transparent;color:var(--muted);padding:0;font-weight:900}
+.search-row{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:14px;padding:0 10px;margin:12px 0;background:#fff}
+.search-row input{border:0;padding-left:0;background:transparent}
+.dropzone{border:1px dashed transparent;border-radius:18px;min-height:120px}
+.drag-over{border-color:#a1a1aa!important;background:#fafafa!important}
+.backlog-list{display:flex;flex-direction:column;gap:8px}
+.backlog-task{border:1px solid var(--line);border-radius:16px;background:#fff;padding:11px;display:flex;justify-content:space-between;gap:10px;align-items:flex-start;cursor:grab}
+.backlog-task strong{display:block;font-size:14px;line-height:1.3}
+.backlog-task p{margin:8px 0 0;color:var(--muted);font-size:13px;line-height:1.35}
+.backlog-task button{border:0;background:transparent;color:var(--muted);padding:2px}
+.backlog-meta{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.backlog-meta span{font-size:11px;font-weight:700;color:var(--muted);background:var(--soft);border-radius:999px;padding:3px 7px}
+.backlog-meta span:first-child:before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--dot);margin-right:5px}
+.week-grid{display:grid;grid-template-columns:repeat(5,minmax(160px,1fr));gap:10px;margin-top:14px}
+.day-column{border:1px solid var(--line);border-radius:20px;background:#fafafa;min-height:430px;padding:10px}
+.day-title{font-size:12px;font-weight:900;letter-spacing:.08em;color:var(--muted);padding:4px 2px 10px;border-bottom:1px solid var(--line);margin-bottom:6px}
+.planned-list{display:flex;flex-direction:column;gap:2px}
+.planned-task{display:grid;grid-template-columns:22px 1fr;align-items:center;gap:8px;padding:8px 2px;border-bottom:1px solid #ededed;cursor:grab;min-height:38px}
+.planned-task span{font-size:14px;line-height:1.25;color:var(--ink);word-break:break-word}
+.check{width:18px;height:18px;border:1.5px solid #a1a1aa;border-radius:5px;background:white;padding:0}
+.check:hover{border-color:var(--ink);background:var(--soft)}
+.empty{min-height:105px;display:grid;place-items:center;text-align:center;color:#a1a1aa;font-size:13px;line-height:1.35;padding:12px}
+.empty.compact{min-height:70px}
+.archive-box{margin-top:18px;border-top:1px solid var(--line);padding-top:14px}
+.archive-list{display:flex;flex-direction:column;margin-top:10px;border:1px solid var(--line);border-radius:18px;overflow:hidden;background:#fff}
+.archive-row{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:10px 12px;border-bottom:1px solid var(--line)}
+.archive-row:last-child{border-bottom:0}
+.archive-row span{text-decoration:line-through;color:var(--muted);font-size:14px}
+.archive-row div{display:flex;gap:8px;flex-shrink:0}
+.archive-row button{border:0;background:transparent;color:var(--ink);font-weight:700;font-size:12px;padding:4px}
+.archive-row .danger-link{color:var(--danger)}
+.archive-empty{padding:12px;color:var(--muted);font-size:14px}
+@media(max-width:1150px){.layout{grid-template-columns:1fr}.week-grid{grid-template-columns:1fr 1fr}.day-column{min-height:260px}.topbar{align-items:stretch;flex-direction:column}.top-actions{justify-content:flex-start}}
+@media(max-width:720px){.app-shell{padding:12px}.week-grid{grid-template-columns:1fr}.form-grid{grid-template-columns:1fr}.category-form{grid-template-columns:1fr 50px}.category-form button{grid-column:1/-1}.panel,.calendar-panel{border-radius:18px}.archive-row{align-items:flex-start;flex-direction:column}.top-actions button,.status-pill{width:100%}}
+
+/* Prioro update: category line in weekly planner + mobile swipe days */
+.planned-content{min-width:0;display:flex;flex-direction:column;gap:3px}
+.planned-title{font-size:14px;line-height:1.25;color:var(--ink);word-break:break-word}
+.planned-category{display:inline-flex;align-items:center;gap:5px;color:var(--muted);font-size:11px;font-weight:700;line-height:1.15}
+.planned-category:before{content:"";width:7px;height:7px;border-radius:50%;background:var(--cat-color);flex:0 0 auto}
+.planned-task span.planned-title{font-size:14px;line-height:1.25;color:var(--ink);word-break:break-word}
+
+@media(max-width:720px){
+  .layout{display:flex;flex-direction:column}
+  .calendar-panel{order:-1}
+  .sidebar{order:2}
+  .calendar-head p{font-size:13px}
+  .week-grid{display:flex;grid-template-columns:none;gap:10px;overflow-x:auto;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;padding-bottom:8px;margin-left:-2px;margin-right:-2px}
+  .week-grid::-webkit-scrollbar{height:6px}
+  .week-grid::-webkit-scrollbar-thumb{background:#d4d4d8;border-radius:999px}
+  .day-column{min-width:84vw;max-width:84vw;scroll-snap-align:start;min-height:390px}
+  .day-title{position:sticky;top:0;background:#fafafa;z-index:2}
+  .planned-task{grid-template-columns:24px 1fr;padding:10px 2px;min-height:46px}
+  .check{width:20px;height:20px;border-radius:6px}
+  .planned-title{font-size:15px}
+  .planned-category{font-size:11px}
+  .archive-box{margin-top:14px}
+}
+
+/* Prioro goals layer: goals support the weekly planner without taking focus away */
+.focus-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:0 0 16px}
+.focus-strip div{background:#fff;border:1px solid var(--line);border-radius:18px;padding:12px}
+.focus-strip strong{display:block;font-size:22px;line-height:1;color:var(--ink)}
+.focus-strip span{display:block;margin-top:5px;color:var(--muted);font-size:12px;font-weight:700}
+.goal-form{display:flex;flex-direction:column;gap:8px;margin-top:12px}
+.goal-groups{display:flex;flex-direction:column;gap:10px;margin-top:12px}
+.goal-group{border-top:1px solid var(--line);padding-top:10px}
+.goal-group h3{margin:0 0 8px;font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+.goal-group>p{margin:0;color:#a1a1aa;font-size:13px}
+.goal-card{border:1px solid var(--line);border-radius:16px;background:#fff;padding:10px;margin-bottom:8px}
+.goal-card-head{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+.goal-card-head strong{font-size:14px;line-height:1.25}
+.goal-card-head button{border:0;background:transparent;color:var(--muted);font-weight:700;font-size:12px;padding:0}
+.goal-meta{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.goal-meta span{font-size:11px;font-weight:700;color:var(--muted);background:var(--soft);border-radius:999px;padding:3px 7px}
+.goal-meta span:first-child:before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--dot);margin-right:5px}
+.goal-card p{margin:8px 0 0;color:var(--muted);font-size:13px;line-height:1.35}
+.progress-row{height:6px;background:var(--soft);border-radius:999px;overflow:hidden;margin:10px 0 6px}
+.progress-row div{height:100%;background:var(--ink);border-radius:999px}
+.goal-card small{color:var(--muted);font-size:11px;font-weight:700}
+
+@media(max-width:720px){
+  .focus-strip{grid-template-columns:repeat(2,1fr);gap:8px}
+  .focus-strip div{padding:10px}
+  .focus-strip strong{font-size:19px}
+  .goals-panel{max-height:none}
+}
+
+/* Prioro layout refinement: left = backlog/goals/categories, right = week/new task/archive */
+.create-task-wide{margin-top:16px;border:1px solid var(--line);border-radius:20px;background:#fff;padding:14px}
+.create-task-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:10px}
+.create-task-head h2{margin:0;font-size:17px;letter-spacing:-.02em}
+.create-task-head p{margin:0;color:var(--muted);font-size:13px;line-height:1.35;text-align:right;max-width:360px}
+.quick-form-wide{display:grid;grid-template-columns:minmax(220px,1.5fr) minmax(140px,.8fr) 105px minmax(150px,1fr) minmax(170px,1fr) auto;gap:8px;align-items:center}
+.quick-form-wide input,.quick-form-wide select{min-width:0}
+.quick-form-wide .primary{height:42px;white-space:nowrap}
+.sidebar>.panel.stretch{order:1}
+.sidebar>.goals-panel{order:2}
+.sidebar>.panel:not(.stretch):not(.goals-panel){order:3}
+.archive-box{margin-top:16px}
+
+@media(max-width:1150px){
+  .quick-form-wide{grid-template-columns:1fr 1fr 110px;align-items:stretch}
+  .quick-form-wide input:first-child{grid-column:1/-1}
+  .quick-form-wide input:nth-last-child(2){grid-column:1/3}
+  .quick-form-wide .primary{height:auto}
+}
+
+@media(max-width:720px){
+  .create-task-wide{margin-top:12px;padding:12px;border-radius:18px}
+  .create-task-head{flex-direction:column;gap:4px}
+  .create-task-head p{text-align:left;max-width:none}
+  .quick-form-wide{grid-template-columns:1fr;gap:8px}
+  .quick-form-wide input:first-child,.quick-form-wide input:nth-last-child(2){grid-column:auto}
+  .quick-form-wide .primary{width:100%}
+  .sidebar>.panel.stretch{order:1}
+  .sidebar>.goals-panel{order:2}
+}
