@@ -1,0 +1,269 @@
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Download, LogOut, RefreshCcw, Search, Trash2 } from 'lucide-react';
+import { isSupabaseConfigured, supabase, supabaseConfigError } from './supabaseClient';
+
+const days = ['LUNEDI', 'MARTEDI', 'MERCOLEDI', 'GIOVEDI', 'VENERDI', 'SABATO', 'DOMENICA'];
+const dayLabels = { LUNEDI: 'Lun', MARTEDI: 'Mar', MERCOLEDI: 'Mer', GIOVEDI: 'Gio', VENERDI: 'Ven', SABATO: 'Sab', DOMENICA: 'Dom' };
+const horizons = ['', 'Questo mese', 'Prossimi 3 mesi', "Quest'anno"];
+const colors = ['#111827', '#2563eb', '#16a34a', '#b45309', '#be123c', '#7c3aed', '#475569'];
+
+export default function App() {
+  if (!isSupabaseConfigured) return <MissingConfig />;
+  return <AuthGate />;
+}
+
+function MissingConfig() {
+  return <div className="auth-page"><div className="auth-card"><p className="eyebrow">Prioro</p><h1>Config Supabase mancante</h1><p>{supabaseConfigError}</p></div></div>;
+}
+
+function AuthGate() {
+  const [session, setSession] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [mode, setMode] = useState('login');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [message, setMessage] = useState('');
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => { setSession(data.session); setLoading(false); });
+    const { data } = supabase.auth.onAuthStateChange((_event, current) => { setSession(current); setLoading(false); });
+    return () => data.subscription.unsubscribe();
+  }, []);
+
+  async function submit(e) {
+    e.preventDefault();
+    setMessage('');
+    setLoading(true);
+    const payload = { email, password };
+    const { error } = mode === 'login'
+      ? await supabase.auth.signInWithPassword(payload)
+      : await supabase.auth.signUp({ ...payload, options: { emailRedirectTo: window.location.origin } });
+    if (error) setMessage(error.message);
+    else if (mode === 'register') setMessage("Registrazione completata. Controlla l'email per confermare l'account.");
+    setLoading(false);
+  }
+
+  if (loading) return <div className="loading">Caricamento...</div>;
+  if (!session) {
+    return <div className="auth-page"><form className="auth-card" onSubmit={submit}>
+      <p className="eyebrow">Prioro</p><h1>Prioro</h1><p>Organizza la tua settimana. Completa ciò che conta.</p>
+      <input value={email} onChange={e => setEmail(e.target.value)} type="email" placeholder="Email" required />
+      <input value={password} onChange={e => setPassword(e.target.value)} type="password" placeholder="Password" minLength={6} required />
+      {message && <div className="notice">{message}</div>}
+      <button className="primary" type="submit">{mode === 'login' ? 'Accedi' : 'Registrati'}</button>
+      <button className="link-btn" type="button" onClick={() => setMode(mode === 'login' ? 'register' : 'login')}>{mode === 'login' ? 'Crea account' : 'Ho già un account'}</button>
+    </form></div>;
+  }
+  return <Planner session={session} />;
+}
+
+function Planner({ session }) {
+  const user = session.user;
+  const [categories, setCategories] = useState([]);
+  const [goals, setGoals] = useState([]);
+  const [tasks, setTasks] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState('Pronto');
+  const [error, setError] = useState('');
+  const [query, setQuery] = useState('');
+  const [selectedDay, setSelectedDay] = useState(0);
+  const [categoryFilter, setCategoryFilter] = useState('');
+  const [showCategoryCreator, setShowCategoryCreator] = useState(false);
+  const [newTitle, setNewTitle] = useState('');
+  const [newCategory, setNewCategory] = useState('');
+  const [newPriority, setNewPriority] = useState('');
+  const [newGoal, setNewGoal] = useState('');
+  const [newNotes, setNewNotes] = useState('');
+  const [catName, setCatName] = useState('');
+  const [catColor, setCatColor] = useState('#111827');
+  const [goalTitle, setGoalTitle] = useState('');
+  const [goalDate, setGoalDate] = useState('');
+  const [goalDescription, setGoalDescription] = useState('');
+  const [draggedTaskId, setDraggedTaskId] = useState('');
+  const [hoverDay, setHoverDay] = useState(null);
+  const dragRef = useRef({ id: '', x: 0, y: 0, active: false });
+
+  const categoryMap = useMemo(() => Object.fromEntries(categories.map(c => [c.id, c])), [categories]);
+  const goalMap = useMemo(() => Object.fromEntries(goals.map(g => [g.id, g])), [goals]);
+  const activeTasks = tasks.filter(t => t.status !== 'Fatto');
+  const doneTasks = tasks.filter(t => t.status === 'Fatto');
+  const activeGoals = goals.filter(g => g.status !== 'Archiviato' && g.status !== 'Completato');
+  const filteredTasks = categoryFilter ? activeTasks.filter(t => t.category_id === categoryFilter) : activeTasks;
+  const backlog = filteredTasks.filter(t => !t.day && t.title.toLowerCase().includes(query.toLowerCase()));
+  const everyDay = filteredTasks.filter(t => t.day === 'OGNI_GIORNO');
+  const weeklyCount = activeTasks.filter(t => t.day && t.day !== 'OGNI_GIORNO').length;
+
+  useEffect(() => { loadAll(); }, []);
+
+  async function loadAll() {
+    setLoading(true); setError('');
+    await supabase.rpc('create_default_categories_for_user', { target_user: user.id });
+    const [catRes, goalRes, taskRes] = await Promise.all([
+      supabase.from('categories').select('*').order('created_at', { ascending: true }),
+      supabase.from('goals').select('*').order('created_at', { ascending: false }),
+      supabase.from('tasks').select('*').order('created_at', { ascending: false })
+    ]);
+    if (catRes.error || goalRes.error || taskRes.error) setError(catRes.error?.message || goalRes.error?.message || taskRes.error?.message);
+    setCategories(catRes.data || []); setGoals(goalRes.data || []); setTasks(taskRes.data || []); setLoading(false);
+  }
+
+  async function addTask(e) {
+    e.preventDefault();
+    const title = newTitle.trim();
+    if (!title) return;
+    setSaving('Salvataggio...');
+    const { data, error: err } = await supabase.from('tasks').insert({ user_id: user.id, title, category_id: newCategory || null, goal_id: newGoal || null, priority: newPriority || 'Media', notes: newNotes.trim(), day: '', status: 'Da fare' }).select('*').single();
+    if (err) setError(err.message); else { setTasks(p => [data, ...p]); setNewTitle(''); setNewNotes(''); setNewGoal(''); setSaving('Salvato'); }
+  }
+
+  async function addCategory(e) {
+    e.preventDefault();
+    const name = catName.trim();
+    if (!name) return;
+    const { data, error: err } = await supabase.from('categories').insert({ user_id: user.id, name, color: catColor }).select('*').single();
+    if (err) setError(err.message); else { setCategories(p => [...p, data]); setCatName(''); setCatColor(colors[(categories.length + 1) % colors.length]); setShowCategoryCreator(false); }
+  }
+
+  async function addGoal(e) {
+    e.preventDefault();
+    const title = goalTitle.trim();
+    if (!title) return;
+    const { data, error: err } = await supabase.from('goals').insert({ user_id: user.id, title, description: goalDescription.trim(), target_date: goalDate || null, horizon: '', status: 'In corso' }).select('*').single();
+    if (err) setError(err.message); else { setGoals(p => [data, ...p]); setGoalTitle(''); setGoalDate(''); setGoalDescription(''); }
+  }
+
+  async function moveTask(id, day) {
+    setTasks(p => p.map(t => t.id === id ? { ...t, day } : t));
+    const { error: err } = await supabase.from('tasks').update({ day }).eq('id', id);
+    if (err) { setError(err.message); loadAll(); } else setSaving('Salvato');
+  }
+
+  async function archiveTask(id) {
+    setTasks(p => p.map(t => t.id === id ? { ...t, status: 'Fatto' } : t));
+    const { error: err } = await supabase.from('tasks').update({ status: 'Fatto' }).eq('id', id);
+    if (err) { setError(err.message); loadAll(); }
+  }
+
+  async function deleteTask(id) {
+    setTasks(p => p.filter(t => t.id !== id));
+    const { error: err } = await supabase.from('tasks').delete().eq('id', id);
+    if (err) { setError(err.message); loadAll(); }
+  }
+
+  async function restoreTask(id) {
+    setTasks(p => p.map(t => t.id === id ? { ...t, status: 'Da fare', day: '' } : t));
+    const { error: err } = await supabase.from('tasks').update({ status: 'Da fare', day: '' }).eq('id', id);
+    if (err) { setError(err.message); loadAll(); }
+  }
+
+  async function clearDay(day) {
+    const ids = activeTasks.filter(t => t.day === day).map(t => t.id);
+    if (!ids.length) return;
+    setTasks(p => p.map(t => ids.includes(t.id) ? { ...t, day: '' } : t));
+    const { error: err } = await supabase.from('tasks').update({ day: '' }).in('id', ids);
+    if (err) { setError(err.message); loadAll(); }
+  }
+
+  async function updateGoalHorizon(id, horizon) {
+    setGoals(p => p.map(g => g.id === id ? { ...g, horizon } : g));
+    const { error: err } = await supabase.from('goals').update({ horizon }).eq('id', id);
+    if (err) { setError(err.message); loadAll(); }
+  }
+
+  async function archiveGoal(id) {
+    setGoals(p => p.map(g => g.id === id ? { ...g, status: 'Archiviato' } : g));
+    const { error: err } = await supabase.from('goals').update({ status: 'Archiviato' }).eq('id', id);
+    if (err) { setError(err.message); loadAll(); }
+  }
+
+  function pointerDown(e, id) {
+    if (e.button !== undefined && e.button !== 0) return;
+    e.preventDefault();
+    dragRef.current = { id, x: e.clientX, y: e.clientY, active: false };
+    window.addEventListener('pointermove', pointerMove);
+    window.addEventListener('pointerup', pointerUp);
+  }
+
+  function pointerMove(e) {
+    const state = dragRef.current;
+    if (!state.id) return;
+    if (!state.active) {
+      if (Math.abs(e.clientX - state.x) < 6 && Math.abs(e.clientY - state.y) < 6) return;
+      state.active = true; setDraggedTaskId(state.id); document.body.classList.add('dragging-task');
+    }
+    const zone = document.elementFromPoint(e.clientX, e.clientY)?.closest('[data-day]');
+    setHoverDay(zone ? zone.getAttribute('data-day') : null);
+  }
+
+  function pointerUp(e) {
+    const state = dragRef.current;
+    window.removeEventListener('pointermove', pointerMove);
+    window.removeEventListener('pointerup', pointerUp);
+    document.body.classList.remove('dragging-task');
+    if (state.active && state.id) {
+      const zone = document.elementFromPoint(e.clientX, e.clientY)?.closest('[data-day]');
+      if (zone) moveTask(state.id, zone.getAttribute('data-day'));
+    }
+    dragRef.current = { id: '', x: 0, y: 0, active: false }; setDraggedTaskId(''); setHoverDay(null);
+  }
+
+  function exportExcel() {
+    const rows = tasks.map(t => `<tr><td>${esc(t.title)}</td><td>${esc(categoryMap[t.category_id]?.name || '')}</td><td>${esc(goalMap[t.goal_id]?.title || '')}</td><td>${esc(t.priority)}</td><td>${esc(t.day || 'NON PIANIFICATO')}</td><td>${esc(t.status)}</td><td>${esc(t.notes || '')}</td></tr>`).join('');
+    downloadFile('prioro-attivita.xls', 'application/vnd.ms-excel', `<table><tr><th>Titolo</th><th>Categoria</th><th>Obiettivo</th><th>Priorità</th><th>Giorno</th><th>Stato</th><th>Note</th></tr>${rows}</table>`);
+  }
+
+  if (loading) return <div className="loading">Caricamento planner...</div>;
+
+  return <main className="app-shell">
+    <header className="topbar"><div><p className="eyebrow">Prioro</p><h1>Prioro</h1><p className="subtitle">Organizza la tua settimana · {user.email}</p></div><div className="top-actions"><span className="status-pill">{saving}</span><button className="soft-btn" onClick={loadAll}><RefreshCcw size={16}/>Aggiorna</button><button className="soft-btn" onClick={exportExcel}><Download size={16}/>Excel</button><button className="logout-btn" onClick={() => supabase.auth.signOut()}><LogOut size={16}/>Esci</button></div></header>
+    {error && <div className="notice error">{error}</div>}
+    <section className="focus-strip"><div><strong>{weeklyCount}</strong><span>in settimana</span></div><div><strong>{backlog.length}</strong><span>da pianificare</span></div><div><strong>{doneTasks.length}</strong><span>completate</span></div><div><strong>{activeGoals.length}</strong><span>obiettivi attivi</span></div></section>
+
+    <section className="workflow-panel">
+      <div className="workflow-create"><div className="create-task-head"><div><h2>Nuova attività</h2><p>Inseriscila, poi trascinala nel giorno corretto.</p></div><button className="category-secondary-btn" type="button" onClick={() => setShowCategoryCreator(v => !v)}>+ Categoria</button></div>
+        <form className="quick-form-wide" onSubmit={addTask}>
+          <input value={newTitle} onChange={e => setNewTitle(e.target.value)} placeholder="Scrivi cosa devi fare" />
+          <select value={newCategory} onChange={e => setNewCategory(e.target.value)}><option value="">Categoria</option>{categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select>
+          <select value={newPriority} onChange={e => setNewPriority(e.target.value)}><option value="">Priorità</option><option>Alta</option><option>Media</option><option>Bassa</option></select>
+          <select value={newGoal} onChange={e => setNewGoal(e.target.value)}><option value="">Obiettivo</option>{activeGoals.map(g => <option key={g.id} value={g.id}>{g.title}</option>)}</select>
+          <input value={newNotes} onChange={e => setNewNotes(e.target.value)} placeholder="Note opzionali" />
+          <button className="primary" type="submit">+ Aggiungi</button>
+        </form>
+        {showCategoryCreator && <form className="quick-category-inline" onSubmit={addCategory}><input value={catName} onChange={e => setCatName(e.target.value)} placeholder="Nome nuova categoria" /><input type="color" value={catColor} onChange={e => setCatColor(e.target.value)} /><button className="soft-btn">Crea categoria</button></form>}
+      </div>
+
+      <div className="workflow-backlog"><div className="section-title"><h2>Elenco attività</h2><span className="count">{backlog.length}</span></div><div className="search-row"><Search size={18}/><input value={query} onChange={e => setQuery(e.target.value)} placeholder="Cerca attività da trascinare" /></div><div data-day="" className={`backlog-list-horizontal ${hoverDay === '' ? 'drag-over' : ''}`}>{backlog.length ? backlog.map(t => <TaskCard key={t.id} task={t} category={categoryMap[t.category_id]} goal={goalMap[t.goal_id]} dragged={draggedTaskId === t.id} onPointerDown={pointerDown} onDelete={deleteTask} />) : <Empty text="Nessuna attività da pianificare." />}</div></div>
+
+      <div className="workflow-week"><div className="calendar-head"><div><h2>Giorni della settimana</h2><p>Da mobile scegli il giorno con i pulsanti. Trascina le attività.</p></div></div><div className="mobile-day-tabs">{days.map((d, i) => <button key={d} className={selectedDay === i ? 'active' : ''} onClick={() => setSelectedDay(i)}>{dayLabels[d]}</button>)}</div><div className="week-grid">{days.map((day, i) => { const items = filteredTasks.filter(t => t.day === day); return <DayColumn key={day} day={day} active={selectedDay === i} items={items} categoryMap={categoryMap} goalMap={goalMap} hoverDay={hoverDay} draggedTaskId={draggedTaskId} pointerDown={pointerDown} archiveTask={archiveTask} clearDay={clearDay} />; })}</div></div>
+      <div className="workflow-everyday"><div className="day-title-row"><div className="day-title">OGNI GIORNO</div><button className="clear-day-btn" onClick={() => clearDay('OGNI_GIORNO')} disabled={!everyDay.length}>Svuota</button></div><div data-day="OGNI_GIORNO" className={`backlog-list-horizontal everyday-zone ${hoverDay === 'OGNI_GIORNO' ? 'drag-over' : ''}`}>{everyDay.length ? everyDay.map(t => <TaskCard key={t.id} task={t} category={categoryMap[t.category_id]} goal={goalMap[t.goal_id]} dragged={draggedTaskId === t.id} onPointerDown={pointerDown} onDelete={deleteTask} />) : <Empty compact text="Trascina qui le attività ricorrenti." />}</div></div>
+    </section>
+
+    <section className="below-grid">
+      <div className="panel goals-panel"><div className="section-title"><h2>Obiettivi</h2><span className="count">{activeGoals.length}</span></div><form className="goal-form-minimal" onSubmit={addGoal}><input value={goalTitle} onChange={e => setGoalTitle(e.target.value)} placeholder="Nome obiettivo" /><input value={goalDate} onChange={e => setGoalDate(e.target.value)} type="date" /><textarea value={goalDescription} onChange={e => setGoalDescription(e.target.value)} placeholder="Descrizione opzionale" rows="2" /><button className="soft-btn">+ Crea obiettivo</button></form><div className="goal-groups">{horizons.map(h => <div key={h} className="goal-group"><h3>{h || 'Da assegnare'}</h3>{activeGoals.filter(g => g.horizon === h).map(g => <GoalCard key={g.id} goal={g} onArchive={archiveGoal} />)}<div className="horizon-actions">{horizons.filter(x => x !== h).map(x => <button key={x} onClick={() => activeGoals.filter(g => g.horizon === h)[0] && updateGoalHorizon(activeGoals.filter(g => g.horizon === h)[0].id, x)}>{x || 'Da assegnare'}</button>)}</div></div>)}</div></div>
+      <div className="panel categories-list-panel"><div className="section-title"><h2>Categorie</h2><span className="count">{categories.length}</span></div><div className="chips"><button className={!categoryFilter ? 'chip chip-active' : 'chip'} onClick={() => setCategoryFilter('')}>Tutte</button>{categories.map(c => <button key={c.id} className={categoryFilter === c.id ? 'chip chip-active' : 'chip'} style={{ '--chip': c.color }} onClick={() => setCategoryFilter(c.id)}>{c.name}</button>)}</div></div>
+      <div className="panel"><div className="archive-head"><h2>Archivio cose fatte</h2><span>{doneTasks.length}</span></div><div className="archive-list">{doneTasks.length ? doneTasks.slice(0, 20).map(t => <div className="archive-row" key={t.id}><span>{t.title}</span><div><button onClick={() => restoreTask(t.id)}>Ripristina</button><button className="danger-link" onClick={() => deleteTask(t.id)}>Elimina</button></div></div>) : <div className="archive-empty">Non ci sono attività archiviate.</div>}</div></div>
+    </section>
+  </main>;
+}
+
+function DayColumn({ day, active, items, categoryMap, goalMap, hoverDay, draggedTaskId, pointerDown, archiveTask, clearDay }) {
+  return <div data-day={day} className={`day-column ${active ? 'mobile-active' : ''} ${hoverDay === day ? 'drag-over' : ''}`}><div className="day-title-row"><div className="day-title">{day}</div><button className="clear-day-btn" onClick={() => clearDay(day)} disabled={!items.length}>Svuota</button></div><div className="planned-list">{items.length ? items.map(t => <PlannedTask key={t.id} task={t} category={categoryMap[t.category_id]} goal={goalMap[t.goal_id]} dragged={draggedTaskId === t.id} onPointerDown={pointerDown} onArchive={archiveTask} />) : <Empty compact text="Trascina qui." />}</div></div>;
+}
+
+function TaskCard({ task, category, goal, dragged, onPointerDown, onDelete }) {
+  const cat = category || { name: 'Senza categoria', color: '#94a3b8' };
+  return <div className={`backlog-task ${dragged ? 'is-dragging' : ''}`} onPointerDown={e => onPointerDown(e, task.id)}><div><strong>{task.title}</strong><div className="backlog-meta"><span style={{ '--dot': cat.color }}>{cat.name}</span><span>{task.priority}</span>{goal && <span>{goal.title}</span>}</div>{task.notes && <p>{task.notes}</p>}</div><button onClick={e => { e.stopPropagation(); onDelete(task.id); }}><Trash2 size={15}/></button></div>;
+}
+
+function PlannedTask({ task, category, goal, dragged, onPointerDown, onArchive }) {
+  const cat = category || { name: 'Senza categoria', color: '#a1a1aa' };
+  return <div className={`planned-task ${dragged ? 'is-dragging' : ''}`} onPointerDown={e => onPointerDown(e, task.id)}><button className="check" onClick={e => { e.stopPropagation(); onArchive(task.id); }} aria-label="Segna come fatta" /><div className="planned-content"><span className="planned-title">{task.title}</span><span className="planned-category" style={{ '--cat-color': cat.color }}>{cat.name}{goal ? ` · ${goal.title}` : ''}</span></div></div>;
+}
+
+function GoalCard({ goal, onArchive }) {
+  return <div className="goal-card"><div className="goal-card-head"><strong>{goal.title}</strong><button onClick={() => onArchive(goal.id)}>Archivia</button></div>{goal.description && <p>{goal.description}</p>}{goal.target_date && <div className="goal-meta"><span>{goal.target_date}</span></div>}</div>;
+}
+
+function Empty({ text, compact = false }) { return <div className={`empty ${compact ? 'compact' : ''}`}>{text}</div>; }
+function esc(v) { return String(v).replace(/[&<>'"]/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[m])); }
+function downloadFile(name, type, content) { const blob = new Blob([content], { type }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 500); }
