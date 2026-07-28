@@ -850,7 +850,7 @@ function PremiumStatsBlock({ stats, isPremium, reportSettings, toggleWeeklyRepor
       </div>
       <div className="premium-insight-box">
         <strong>Nota sugli insight</strong>
-        <span>Il Weeko Score è una metrica interna calcolata da completamento, costanza, trend e procrastinazione. Le funzionalità esistenti non sono state modificate.</span>
+        <span>Il Weeko Score è una metrica interna calcolata da completamento, costanza, trend e procrastinazione.</span>
       </div>
       <label className="report-toggle"><input type="checkbox" checked={!!reportSettings?.weekly_email_enabled} onChange={e => toggleWeeklyReport(e.target.checked)} /> Ricevi report email ogni lunedì alle 07:00</label>
     </>}
